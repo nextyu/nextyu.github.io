@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>git on 远走时光</title>
+    <link>https://nextyu.com/tags/git/</link>
+    <description>Recent content in git on 远走时光</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-cn</language>
+    <lastBuildDate>Thu, 17 Nov 2022 17:10:56 +0800</lastBuildDate><atom:link href="https://nextyu.com/tags/git/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>git常用语句</title>
+      <link>https://nextyu.com/posts/git/git%E5%B8%B8%E7%94%A8%E8%AF%AD%E5%8F%A5/</link>
+      <pubDate>Thu, 17 Nov 2022 17:10:56 +0800</pubDate>
+      
+      <guid>https://nextyu.com/posts/git/git%E5%B8%B8%E7%94%A8%E8%AF%AD%E5%8F%A5/</guid>
+      <description>git常用的配置语句</description>
+    </item>
+    
+  </channel>
+</rss>

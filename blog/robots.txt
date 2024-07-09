@@ -1,0 +1,3 @@
+User-agent: *
+Disallow:
+Sitemap: https://nextyu.com/sitemap.xml

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Kms on 程序员皂白</title>
+    <link>https://nextyu.github.io/zh/tags/kms/</link>
+    <description>Recent content in Kms on 程序员皂白</description>
+    <generator>Hugo -- 0.128.0</generator>
+    <language>zh</language>
+    <lastBuildDate>Thu, 17 Nov 2022 17:10:56 +0800</lastBuildDate>
+    <atom:link href="https://nextyu.github.io/zh/tags/kms/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>使用vlmcsd激活window和office</title>
+      <link>https://nextyu.github.io/zh/posts/windows/%E4%BD%BF%E7%94%A8vlmcsd%E6%BF%80%E6%B4%BBwindow%E5%92%8Coffice/</link>
+      <pubDate>Thu, 17 Nov 2022 17:10:56 +0800</pubDate>
+      <guid>https://nextyu.github.io/zh/posts/windows/%E4%BD%BF%E7%94%A8vlmcsd%E6%BF%80%E6%B4%BBwindow%E5%92%8Coffice/</guid>
+      <description>使用vlmcsd激活window和office</description>
+    </item>
+  </channel>
+</rss>

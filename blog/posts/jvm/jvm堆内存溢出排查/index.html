@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>JVM堆内存溢出排查 | 远走时光</title>
+<meta name="keywords" content="jvm">
+<meta name="description" content="JVM堆内存溢出排查">
+<meta name="author" content="皂白">
+<link rel="canonical" href="https://nextyu.com/posts/jvm/jvm%E5%A0%86%E5%86%85%E5%AD%98%E6%BA%A2%E5%87%BA%E6%8E%92%E6%9F%A5/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.3299c596a7007118365635c056dd427dace22b7b8c1341fdef6fa6c31359ba10.css" integrity="sha256-MpnFlqcAcRg2VjXAVt1CfaziK3uME0H972&#43;mwxNZuhA=" rel="preload stylesheet" as="style">
+<script defer crossorigin="anonymous" src="/assets/js/highlight.acb54fd32bbc1982428b8850317e45d076b95012730a5936667e6bc21777692a.js" integrity="sha256-rLVP0yu8GYJCi4hQMX5F0Ha5UBJzClk2Zn5rwhd3aSo="
+    onload="hljs.initHighlightingOnLoad();"></script>
+<link rel="icon" href="https://nextyu.com/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://nextyu.com/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://nextyu.com/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://nextyu.com/apple-touch-icon.png">
+<link rel="mask-icon" href="https://nextyu.com/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --hljs-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><meta property="og:title" content="JVM堆内存溢出排查" />
+<meta property="og:description" content="JVM堆内存溢出排查" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nextyu.com/posts/jvm/jvm%E5%A0%86%E5%86%85%E5%AD%98%E6%BA%A2%E5%87%BA%E6%8E%92%E6%9F%A5/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2022-11-17T17:10:56+08:00" />
+<meta property="article:modified_time" content="2022-12-05T16:44:56+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="JVM堆内存溢出排查"/>
+<meta name="twitter:description" content="JVM堆内存溢出排查"/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "📚文章",
+      "item": "https://nextyu.com/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  3 ,
+      "name": "JVM堆内存溢出排查",
+      "item": "https://nextyu.com/posts/jvm/jvm%E5%A0%86%E5%86%85%E5%AD%98%E6%BA%A2%E5%87%BA%E6%8E%92%E6%9F%A5/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "JVM堆内存溢出排查",
+  "name": "JVM堆内存溢出排查",
+  "description": "JVM堆内存溢出排查",
+  "keywords": [
+    "jvm"
+  ],
+  "articleBody": "Java堆用于储存对象实例，我们只要不断地创建对象，并且保证GC Roots到对象之间有可达路径来避免垃圾回收机制清除这些对象，那么随着对象数量的增加，总容量触及最大堆的容量限制后就会产生内存溢出异常。\n注意！！！下面是以 jdk 8 HotSpot 虚拟机为例！！！\n查看主机内存情况 1 free -h 1 2 3 total used free shared buff/cache available Mem: 3.7G 2.6G 220M 524K 921M 910M Swap: 0B 0B 0B 第一列\nMem 内存的使用信息\nSwap 交换空间的使用信息\n第一行\ntotal 系统总的可用物理内存大小\nused 已被使用的物理内存大小\nfree 还有多少物理内存可用\nshared 被共享使用的物理内存大小\nbuff/cache 被 buffer 和 cache 使用的物理内存大小\navailable 还可以被 应用程序 使用的物理内存大小\nfree 与 available 的区别 free 是真正尚未被使用的物理内存数量。\navailable 是应用程序认为可用内存数量，available = free + buffer + cache (注：只是大概的计算方法)\nLinux 为了提升读写性能，会消耗一部分内存资源缓存磁盘数据，对于内核来说，buffer 和 cache 其实都属于已经被使用的内存。但当应用程序申请内存时，如果 free 内存不够，内核就会回收 buffer 和 cache 的内存来满足应用程序的请求。\n查询java进程的PID 1 jps 1 25572 xxx.jar 得到 PID 25572\n查询gc回收信息 1 jstat -gcutil PID 1s # 每隔一秒输出gc信息 1 2 3 4 5 6 S0 S1 E O M CCS YGC YGCT FGC FGCT GCT 0.00 39.58 50.74 27.25 95.26 92.01 7261 137.361 3 0.522 137.883 0.00 39.58 51.81 27.25 95.26 92.01 7261 137.361 3 0.522 137.883 0.00 39.58 53.24 27.25 95.26 92.01 7261 137.361 3 0.522 137.883 0.00 39.58 55.74 27.25 95.26 92.01 7261 137.361 3 0.522 137.883 0.00 39.58 58.49 27.25 95.26 92.01 7261 137.361 3 0.522 137.883 S0 第 0 个 survivor（幸存区）使用的百分比\nS1 第 1 个 survivor（幸存区）使用的百分比\nE Eden 区使用内存的百分比\nO 老生代内存使用的百分比\nM MetaSpace 的内存使用百分比\nCCS 压缩类空间利用率百分比\nYGC 程序启动以来 Young GC 发生的次数\nYGCT 程序启动以来 Young GC 共消耗的时间(s)\nFGC 程序启动以来 Full GC 发生的次数\nFGCT 程序启动以来 Full GC 共消耗的时间(s)\nGCT 程序启动以来 GC 的总用时(s)\ndump出jvm堆内存 1 jmap -dump:live,format=b,file=/tmp/jvm_xxx.bin PID 把jvm_xxx.bin下载到本地计算机\n下载 Eclipse Memory Analyzer（mat）\n新版本的mat需要jdk11，建议下载老版本\n下载地址\n使用mat打开jvm_xxx.bin文件，mat会自动分析堆文件，分析完成之后点击Leak Suspects，一般就能看出哪些对象占用了大量内存\n如果dump出的堆文件特别大，mat打开报内存不足，可以修改mat配置文件，适当加大堆内存容量\nMemoryAnalyzer.ini\n1 2 -Xms4096m -Xmx4096m 参考资料 QQA: jstat gcutil 的输出是什么意思 jstat linux free 命令下free/available区别 free ",
+  "wordCount" : "947",
+  "inLanguage": "zh",
+  "datePublished": "2022-11-17T17:10:56+08:00",
+  "dateModified": "2022-12-05T16:44:56+08:00",
+  "author":[{
+    "@type": "Person",
+    "name": "皂白"
+  }],
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://nextyu.com/posts/jvm/jvm%E5%A0%86%E5%86%85%E5%AD%98%E6%BA%A2%E5%87%BA%E6%8E%92%E6%9F%A5/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "远走时光",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://nextyu.com/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://nextyu.com" accesskey="h" title="远走时光 (Alt + H)">远走时光</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://nextyu.com/" title="🏠主页">
+                    <span>🏠主页</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://nextyu.com/posts" title="📚文章">
+                    <span>📚文章</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://nextyu.com/archives/" title="⏱时间轴">
+                    <span>⏱时间轴</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://nextyu.com/tags" title="🔖标签">
+                    <span>🔖标签</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://nextyu.com/about" title="🙋🏻‍♂️关于">
+                    <span>🙋🏻‍♂️关于</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://nextyu.com">🏠主页</a>&nbsp;»&nbsp;<a href="https://nextyu.com/posts/">📚文章</a></div>
+    <h1 class="post-title">
+      JVM堆内存溢出排查
+    </h1>
+    <div class="post-description">
+      JVM堆内存溢出排查
+    </div>
+    <div class="post-meta"><span title='2022-11-17 17:10:56 +0800 CST'>2022-11-17</span>&nbsp;·&nbsp;2 分钟&nbsp;·&nbsp;皂白
+
+</div>
+  </header> 
+  <div class="post-content"><p>Java堆用于储存对象实例，我们只要不断地创建对象，并且保证GC Roots到对象之间有可达路径来避免垃圾回收机制清除这些对象，那么随着对象数量的增加，总容量触及最大堆的容量限制后就会产生内存溢出异常。</p>
+<p>注意！！！下面是以 jdk 8 HotSpot 虚拟机为例！！！</p>
+<h2 id="查看主机内存情况">查看主机内存情况<a hidden class="anchor" aria-hidden="true" href="#查看主机内存情况">#</a></h2>
+<div class="highlight"><div style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">
+<table style="border-spacing:0;padding:0;margin:0;border:0;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code><span style="white-space:pre;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">1
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>free -h
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">
+<table style="border-spacing:0;padding:0;margin:0;border:0;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code><span style="white-space:pre;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">1
+</span><span style="white-space:pre;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">2
+</span><span style="white-space:pre;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">3
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>              total        used        free      shared  buff/cache   available
+</span></span><span style="display:flex;"><span>Mem:           3.7G        2.6G        220M        524K        921M        910M
+</span></span><span style="display:flex;"><span>Swap:            0B          0B          0B
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>第一列</strong></p>
+<p><code>Mem</code> 内存的使用信息<br>
+<code>Swap</code> 交换空间的使用信息</p>
+<p><strong>第一行</strong></p>
+<p><code>total</code> 系统总的可用物理内存大小<br>
+<code>used</code> 已被使用的物理内存大小<br>
+<code>free</code> 还有多少物理内存可用<br>
+<code>shared</code> 被共享使用的物理内存大小<br>
+<code>buff/cache</code> 被 buffer 和 cache 使用的物理内存大小<br>
+<code>available</code> 还可以被 <strong><em>应用程序</em></strong> 使用的物理内存大小</p>
+<h3 id="free-与-available-的区别">free 与 available 的区别<a hidden class="anchor" aria-hidden="true" href="#free-与-available-的区别">#</a></h3>
+<p><code>free</code> 是真正尚未被使用的物理内存数量。<br>
+<code>available</code> 是应用程序认为可用内存数量，<code>available = free + buffer + cache</code> (注：只是大概的计算方法)</p>
+<p>Linux 为了提升读写性能，会消耗一部分内存资源缓存磁盘数据，对于内核来说，buffer 和 cache 其实都属于已经被使用的内存。但当应用程序申请内存时，如果 free 内存不够，内核就会回收 buffer 和 cache 的内存来满足应用程序的请求。</p>
+<h2 id="查询java进程的pid">查询java进程的PID<a hidden class="anchor" aria-hidden="true" href="#查询java进程的pid">#</a></h2>
+<div class="highlight"><div style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">
+<table style="border-spacing:0;padding:0;margin:0;border:0;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code><span style="white-space:pre;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">1
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>jps
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">
+<table style="border-spacing:0;padding:0;margin:0;border:0;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code><span style="white-space:pre;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">1
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>25572 xxx.jar
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>得到 PID 25572</p>
+<h2 id="查询gc回收信息">查询gc回收信息<a hidden class="anchor" aria-hidden="true" href="#查询gc回收信息">#</a></h2>
+<div class="highlight"><div style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">
+<table style="border-spacing:0;padding:0;margin:0;border:0;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code><span style="white-space:pre;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">1
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>jstat -gcutil PID 1s <span style="color:#007f7f"># 每隔一秒输出gc信息</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">
+<table style="border-spacing:0;padding:0;margin:0;border:0;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code><span style="white-space:pre;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">1
+</span><span style="white-space:pre;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">2
+</span><span style="white-space:pre;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">3
+</span><span style="white-space:pre;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">4
+</span><span style="white-space:pre;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">5
+</span><span style="white-space:pre;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">6
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>S0     S1     E      O      M     CCS    YGC     YGCT    FGC    FGCT     GCT   
+</span></span><span style="display:flex;"><span>0.00  39.58  50.74  27.25  95.26  92.01   7261  137.361     3    0.522  137.883
+</span></span><span style="display:flex;"><span>0.00  39.58  51.81  27.25  95.26  92.01   7261  137.361     3    0.522  137.883
+</span></span><span style="display:flex;"><span>0.00  39.58  53.24  27.25  95.26  92.01   7261  137.361     3    0.522  137.883
+</span></span><span style="display:flex;"><span>0.00  39.58  55.74  27.25  95.26  92.01   7261  137.361     3    0.522  137.883
+</span></span><span style="display:flex;"><span>0.00  39.58  58.49  27.25  95.26  92.01   7261  137.361     3    0.522  137.883
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>S0</strong> 第 0 个 survivor（幸存区）使用的百分比</p>
+<p><strong>S1</strong> 第 1 个 survivor（幸存区）使用的百分比</p>
+<p><strong>E</strong> <code>Eden</code> 区使用内存的百分比</p>
+<p><strong>O</strong> 老生代内存使用的百分比</p>
+<p><strong>M</strong> <code>MetaSpace</code> 的内存使用百分比</p>
+<p><strong>CCS</strong> 压缩类空间利用率百分比</p>
+<p><strong>YGC</strong> 程序启动以来 Young GC 发生的次数</p>
+<p><strong>YGCT</strong> 程序启动以来 Young GC 共消耗的时间(s)</p>
+<p><strong>FGC</strong> 程序启动以来 Full GC 发生的次数</p>
+<p><strong>FGCT</strong> 程序启动以来 Full GC 共消耗的时间(s)</p>
+<p><strong>GCT</strong> 程序启动以来 GC 的总用时(s)</p>
+<h2 id="dump出jvm堆内存">dump出jvm堆内存<a hidden class="anchor" aria-hidden="true" href="#dump出jvm堆内存">#</a></h2>
+<div class="highlight"><div style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">
+<table style="border-spacing:0;padding:0;margin:0;border:0;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code><span style="white-space:pre;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">1
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>jmap -dump:live,format=b,file=/tmp/jvm_xxx.bin PID
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>把<code>jvm_xxx.bin</code>下载到本地计算机</p>
+<p>下载 Eclipse Memory Analyzer（mat）</p>
+<p>新版本的mat需要jdk11，建议下载老版本</p>
+<p><a href="https://www.eclipse.org/mat/">下载地址</a></p>
+<p>使用mat打开jvm_xxx.bin文件，mat会自动分析堆文件，分析完成之后点击<code>Leak Suspects</code>，一般就能看出哪些对象占用了大量内存</p>
+<p><img src="/posts/jvm/mat1.png" alt="alt mat1"/></p>
+<p><img src="/posts/jvm/mat2.png" alt="alt mat1"/></p>
+<p>如果dump出的堆文件特别大，mat打开报内存不足，可以修改mat配置文件，适当加大堆内存容量</p>
+<p><code>MemoryAnalyzer.ini</code></p>
+<div class="highlight"><div style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">
+<table style="border-spacing:0;padding:0;margin:0;border:0;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code><span style="white-space:pre;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">1
+</span><span style="white-space:pre;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">2
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>-Xms4096m
+</span></span><span style="display:flex;"><span>-Xmx4096m
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="参考资料">参考资料<a hidden class="anchor" aria-hidden="true" href="#参考资料">#</a></h2>
+<ul>
+<li><a href="https://lotabout.me/2018/QQA-Understanding-jstat-gc-output/">QQA: jstat gcutil 的输出是什么意思</a></li>
+<li><a href="https://docs.oracle.com/javase/8/docs/technotes/tools/unix/jstat.html">jstat</a></li>
+<li><a href="https://www.jianshu.com/p/2ffeb3a3aa90">linux free 命令下free/available区别</a></li>
+<li><a href="https://man7.org/linux/man-pages/man1/free.1.html">free</a></li>
+</ul>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://nextyu.com/tags/jvm/">jvm</a></li>
+    </ul>
+<nav class="paginav">
+  <a class="prev" href="https://nextyu.com/posts/jvm/jvm%E6%9C%AC%E5%9C%B0%E5%86%85%E5%AD%98native-memory%E8%B7%9F%E8%B8%AA/">
+    <span class="title">« 上一页</span>
+    <br>
+    <span>jvm本地内存（native memory）跟踪</span>
+  </a>
+  <a class="next" href="https://nextyu.com/posts/jvm/%E5%86%85%E5%AD%98%E6%BA%A2%E5%87%BA%E5%92%8C%E5%86%85%E5%AD%98%E6%B3%84%E9%9C%B2%E7%9A%84%E5%8C%BA%E5%88%AB/">
+    <span class="title">下一页 »</span>
+    <br>
+    <span>内存溢出和内存泄露的区别</span>
+  </a>
+</nav>
+
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2022 <a href="https://beian.miit.gov.cn" target="_blank">蜀ICP备15017997号-1</a></span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+    本文总阅读量 <span id="busuanzi_value_page_pv"></span> 次
+    本文总访客量 <span id="busuanzi_value_page_uv"></span> 人
+    本站总访问量 <span id="busuanzi_value_site_pv"></span> 次
+    本站总访客数 <span id="busuanzi_value_site_uv"></span> 人
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+
+<script async src="https://npm.elemecdn.com/penndu@1.0.0/bsz.js"></script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = '复制';
+
+        function copyingDone() {
+            copybutton.innerHTML = '已复制！';
+            setTimeout(() => {
+                copybutton.innerHTML = '复制';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>

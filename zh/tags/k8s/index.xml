@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>K8s on 程序员皂白</title>
+    <link>https://nextyu.github.io/zh/tags/k8s/</link>
+    <description>Recent content in K8s on 程序员皂白</description>
+    <generator>Hugo -- 0.128.0</generator>
+    <language>zh</language>
+    <lastBuildDate>Wed, 11 Jan 2023 15:08:21 +0800</lastBuildDate>
+    <atom:link href="https://nextyu.github.io/zh/tags/k8s/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>容器环境JVM内存参数最佳实践</title>
+      <link>https://nextyu.github.io/zh/posts/jvm/%E5%AE%B9%E5%99%A8%E7%8E%AF%E5%A2%83jvm%E5%86%85%E5%AD%98%E5%8F%82%E6%95%B0%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5/</link>
+      <pubDate>Wed, 11 Jan 2023 15:08:21 +0800</pubDate>
+      <guid>https://nextyu.github.io/zh/posts/jvm/%E5%AE%B9%E5%99%A8%E7%8E%AF%E5%A2%83jvm%E5%86%85%E5%AD%98%E5%8F%82%E6%95%B0%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5/</guid>
+      <description>容器环境JVM内存参数最佳实践</description>
+    </item>
+    <item>
+      <title>K3s安装Kubernetes Dashboard</title>
+      <link>https://nextyu.github.io/zh/posts/k8s/k3s%E5%AE%89%E8%A3%85kubernetes-dashboard/</link>
+      <pubDate>Thu, 15 Dec 2022 11:52:25 +0800</pubDate>
+      <guid>https://nextyu.github.io/zh/posts/k8s/k3s%E5%AE%89%E8%A3%85kubernetes-dashboard/</guid>
+      <description>K3s安装Kubernetes Dashboard，方便在线管理服务。 在上一篇文章ubuntu20.04安装K3s集群，我们已经搭建好了K3s</description>
+    </item>
+    <item>
+      <title>ubuntu20.04安装K3s集群</title>
+      <link>https://nextyu.github.io/zh/posts/k8s/ubuntu20.04%E5%AE%89%E8%A3%85k3s%E9%9B%86%E7%BE%A4/</link>
+      <pubDate>Wed, 14 Dec 2022 13:36:11 +0800</pubDate>
+      <guid>https://nextyu.github.io/zh/posts/k8s/ubuntu20.04%E5%AE%89%E8%A3%85k3s%E9%9B%86%E7%BE%A4/</guid>
+      <description>ubuntu20.04安装K3s集群</description>
+    </item>
+  </channel>
+</rss>

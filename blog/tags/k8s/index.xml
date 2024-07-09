@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>k8s on 远走时光</title>
+    <link>https://nextyu.com/tags/k8s/</link>
+    <description>Recent content in k8s on 远走时光</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-cn</language>
+    <lastBuildDate>Thu, 15 Dec 2022 11:52:25 +0800</lastBuildDate><atom:link href="https://nextyu.com/tags/k8s/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>K3s安装Kubernetes Dashboard</title>
+      <link>https://nextyu.com/posts/k8s/k3s%E5%AE%89%E8%A3%85kubernetes-dashboard/</link>
+      <pubDate>Thu, 15 Dec 2022 11:52:25 +0800</pubDate>
+      
+      <guid>https://nextyu.com/posts/k8s/k3s%E5%AE%89%E8%A3%85kubernetes-dashboard/</guid>
+      <description>K3s安装Kubernetes Dashboard，方便在线管理服务。 在上一篇文章ubuntu20.04安装K3s集群，我们已经搭建好了K3s</description>
+    </item>
+    
+    <item>
+      <title>ubuntu20.04安装K3s集群</title>
+      <link>https://nextyu.com/posts/k8s/ubuntu20.04%E5%AE%89%E8%A3%85k3s%E9%9B%86%E7%BE%A4/</link>
+      <pubDate>Wed, 14 Dec 2022 13:36:11 +0800</pubDate>
+      
+      <guid>https://nextyu.com/posts/k8s/ubuntu20.04%E5%AE%89%E8%A3%85k3s%E9%9B%86%E7%BE%A4/</guid>
+      <description>ubuntu20.04安装K3s集群</description>
+    </item>
+    
+  </channel>
+</rss>

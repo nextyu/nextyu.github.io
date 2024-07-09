@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Tags on 程序员皂白</title>
+    <link>https://nextyu.github.io/zh/tags/</link>
+    <description>Recent content in Tags on 程序员皂白</description>
+    <generator>Hugo -- 0.128.0</generator>
+    <language>zh</language>
+    <lastBuildDate>Wed, 11 Jan 2023 15:08:21 +0800</lastBuildDate>
+    <atom:link href="https://nextyu.github.io/zh/tags/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Docker</title>
+      <link>https://nextyu.github.io/zh/tags/docker/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>https://nextyu.github.io/zh/tags/docker/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Jvm</title>
+      <link>https://nextyu.github.io/zh/tags/jvm/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>https://nextyu.github.io/zh/tags/jvm/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>K8s</title>
+      <link>https://nextyu.github.io/zh/tags/k8s/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>https://nextyu.github.io/zh/tags/k8s/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>K3s</title>
+      <link>https://nextyu.github.io/zh/tags/k3s/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>https://nextyu.github.io/zh/tags/k3s/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Kms</title>
+      <link>https://nextyu.github.io/zh/tags/kms/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>https://nextyu.github.io/zh/tags/kms/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Office</title>
+      <link>https://nextyu.github.io/zh/tags/office/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>https://nextyu.github.io/zh/tags/office/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Windows</title>
+      <link>https://nextyu.github.io/zh/tags/windows/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>https://nextyu.github.io/zh/tags/windows/</guid>
+      <description></description>
+    </item>
+  </channel>
+</rss>

@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="zh" dir="auto">
+
+<head><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="index, follow">
+<title>ubuntu20.04安装K3s集群 | 程序员皂白</title>
+<meta name="keywords" content="k8s, k3s">
+<meta name="description" content="ubuntu20.04安装K3s集群">
+<meta name="author" content="皂白">
+<link rel="canonical" href="https://nextyu.github.io/zh/posts/k8s/ubuntu20.04%E5%AE%89%E8%A3%85k3s%E9%9B%86%E7%BE%A4/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.54405a410796490bc874ab6181fac9b675753cc2b91375d8f882566459eca428.css" integrity="sha256-VEBaQQeWSQvIdKthgfrJtnV1PMK5E3XY&#43;IJWZFnspCg=" rel="preload stylesheet" as="style">
+<link rel="icon" href="https://nextyu.github.io/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="https://nextyu.github.io/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://nextyu.github.io/favicon-32x32.png">
+<link rel="apple-touch-icon" href="https://nextyu.github.io/apple-touch-icon.png">
+<link rel="mask-icon" href="https://nextyu.github.io/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="zh" href="https://nextyu.github.io/zh/posts/k8s/ubuntu20.04%E5%AE%89%E8%A3%85k3s%E9%9B%86%E7%BE%A4/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --code-block-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript>
+  
+
+<meta property="og:title" content="ubuntu20.04安装K3s集群" />
+<meta property="og:description" content="ubuntu20.04安装K3s集群" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://nextyu.github.io/zh/posts/k8s/ubuntu20.04%E5%AE%89%E8%A3%85k3s%E9%9B%86%E7%BE%A4/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2022-12-14T13:36:11+08:00" />
+<meta property="article:modified_time" content="2022-12-14T13:36:11+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="ubuntu20.04安装K3s集群"/>
+<meta name="twitter:description" content="ubuntu20.04安装K3s集群"/>
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position":  1 ,
+      "name": "📚文章",
+      "item": "https://nextyu.github.io/zh/posts/"
+    }, 
+    {
+      "@type": "ListItem",
+      "position":  2 ,
+      "name": "ubuntu20.04安装K3s集群",
+      "item": "https://nextyu.github.io/zh/posts/k8s/ubuntu20.04%E5%AE%89%E8%A3%85k3s%E9%9B%86%E7%BE%A4/"
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "ubuntu20.04安装K3s集群",
+  "name": "ubuntu20.04安装K3s集群",
+  "description": "ubuntu20.04安装K3s集群",
+  "keywords": [
+    "k8s", "k3s"
+  ],
+  "articleBody": "学习K8s为什么要安装K3s？K3s是轻量级的K8s，完全兼容K8s，和K8s操作也是一样的，安装简单，资源占用少，完全满足学习使用要求，学习阶段没有必要把大量的时间浪费在安装K8s上，生产环境一般都会直接买云服务器厂商的K8s，不用自己搭建。\n运行环境 win10使用VMware Workstation安装ubuntu-20.04。\nK3s版本\nv1.25.4+k3s1\n规划\nk8s-master 192.168.66.42 k8s-worker1 192.168.66.43 k8s-worker2 192.168.66.45 内存：2G、CPU：2核、硬盘：20G\n任意内网ip就行，保证三台服务器能互相ping通。\n准备工作 需要在三台机器上都执行如下操作：\n关闭防火墙 1 sudo ufw disable 关闭swap 1 sudo vim /etc/fstab 找到 /swap.img none swap sw 0 0，在行首添加 # 变成#/swap.img none swap sw 0 0\n重启系统并验证\n1 sudo swapon --show 输出为空即表示生效\nhostname 需要确保三台机器的hostname是不同的\n可以使用hostnamectl查看hostname\n1 hostnamectl 1 2 3 4 5 6 7 8 9 Static hostname: k8s-master Icon name: computer-vm Chassis: vm Machine ID: 2dfc205478df4165ad6cddc376b83a94 Boot ID: 3edc65716421404cb48164c35980a5b7 Virtualization: vmware Operating System: Ubuntu 20.04.5 LTS Kernel: Linux 5.4.0-135-generic Architecture: x86-64 1 2 3 4 5 6 7 8 9 Static hostname: k8s-worker1 Icon name: computer-vm Chassis: vm Machine ID: 2dfc205478df4165ad6cddc376b83a94 Boot ID: 0fd037607afb49f285ad525e765e8943 Virtualization: vmware Operating System: Ubuntu 20.04.5 LTS Kernel: Linux 5.4.0-135-generic Architecture: x86-64 设置hostname\n1 2 3 sudo hostnamectl set-hostname k8s-master sudo hostnamectl set-hostname k8s-worker1 sudo hostnamectl set-hostname k8s-worker1 ``\n下载K3s安装包 安装脚本install.sh 本地新建install.sh，打开https://get.k3s.io/，复制内容到install.sh\nk3s二进制文件 k3s镜像文件 下载地址\n一共三个文件\ninstall.sh k3s k3s-airgap-images-amd64.tar.gz 安装K3s k8s-master主机\n先在k8s-master主机安装K3s\n1 2 3 4 5 # 将k3s二进制文件移动到/usr/local/bin目录 sudo mv k3s /usr/local/bin # 添加执行权限 sudo chmod +x /usr/local/bin/k3s 1 2 3 4 5 # 新建目录 sudo mkdir -p /var/lib/rancher/k3s/agent/images/ # 将镜像移动到此目录（无需解压） sudo cp ./k3s-airgap-images-amd64.tar.gz /var/lib/rancher/k3s/agent/images/ 1 2 3 4 5 6 7 8 9 10 11 # 添加执行权限 sudo chmod +x install.sh # 离线安装 sudo INSTALL_K3S_SKIP_DOWNLOAD=true ./install.sh # 安装完成后，查看节点状态 sudo kubectl get node # 查看token sudo cat /var/lib/rancher/k3s/server/node-token 1 2 # token K1039d5486f90d89c63fd5b06af82594a82e20b7795d05861b402275c984ff9a359::server:0d9bdb8eb2214153d4f629e99b5baaf8 k8s-worker1、k8s-worker2主机\n接着在k8s-worker1、k8s-worker2主机安装K3s\n1 2 3 4 5 # 将k3s二进制文件移动到/usr/local/bin目录 sudo mv k3s /usr/local/bin # 添加执行权限 sudo chmod +x /usr/local/bin/k3s 1 2 3 4 5 # 新建目录 sudo mkdir -p /var/lib/rancher/k3s/agent/images/ # 将镜像移动到此目录（无需解压） sudo cp ./k3s-airgap-images-amd64.tar.gz /var/lib/rancher/k3s/agent/images/ 1 2 # 添加执行权限 sudo chmod +x install.sh 注意！！！这一步要加上k8s-master主机的ip和刚才得到的token\n1 2 3 4 5 # 离线安装 sudo INSTALL_K3S_SKIP_DOWNLOAD=true \\ K3S_URL=https://192.168.66.42:6443 \\ K3S_TOKEN=K1039d5486f90d89c63fd5b06af82594a82e20b7795d05861b402275c984ff9a359::server:0d9bdb8eb2214153d4f629e99b5baaf8 \\ ./install.sh 验证安装 k8s-master主机\n在k8s-master主机执行\n1 sudo kubectl get node -o wide 得到\n1 2 3 4 NAME STATUS ROLES AGE VERSION INTERNAL-IP EXTERNAL-IP OS-IMAGE KERNEL-VERSION CONTAINER-RUNTIME k8s-worker1 Ready 2d2h v1.25.4+k3s1 192.168.66.43 Ubuntu 20.04.5 LTS 5.4.0-135-generic containerd://1.6.8-k3s1 k8s-worker2 Ready 2d2h v1.25.4+k3s1 192.168.66.45 Ubuntu 20.04.5 LTS 5.4.0-135-generic containerd://1.6.8-k3s1 k8s-master Ready control-plane,master 2d3h v1.25.4+k3s1 192.168.66.42 Ubuntu 20.04.5 LTS 5.4.0-135-generic containerd://1.6.8-k3s1 证明集群安装搭建成功了\n参考资料 k3s官网 如何在Ubuntu 20.04设置主机名 Kubernetes二小时入门教程 docker一小时入门教程 ",
+  "wordCount" : "1111",
+  "inLanguage": "zh",
+  "datePublished": "2022-12-14T13:36:11+08:00",
+  "dateModified": "2022-12-14T13:36:11+08:00",
+  "author":[{
+    "@type": "Person",
+    "name": "皂白"
+  }],
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://nextyu.github.io/zh/posts/k8s/ubuntu20.04%E5%AE%89%E8%A3%85k3s%E9%9B%86%E7%BE%A4/"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "程序员皂白",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://nextyu.github.io/favicon.ico"
+    }
+  }
+}
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="https://nextyu.github.io/zh/" accesskey="h" title="程序员皂白 (Alt + H)">程序员皂白</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="https://nextyu.github.io/zh/" title="🏠主页">
+                    <span>🏠主页</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://nextyu.github.io/zh/posts" title="📚文章">
+                    <span>📚文章</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://nextyu.github.io/zh/archives/" title="⏱时间轴">
+                    <span>⏱时间轴</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://nextyu.github.io/zh/tags" title="🔖标签">
+                    <span>🔖标签</span>
+                </a>
+            </li>
+            <li>
+                <a href="https://nextyu.github.io/zh/about" title="🙋🏻‍♂️关于">
+                    <span>🙋🏻‍♂️关于</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    <div class="breadcrumbs"><a href="https://nextyu.github.io/zh/">🏠主页</a>&nbsp;»&nbsp;<a href="https://nextyu.github.io/zh/posts/">📚文章</a></div>
+    <h1 class="post-title entry-hint-parent">
+      ubuntu20.04安装K3s集群
+    </h1>
+    <div class="post-description">
+      ubuntu20.04安装K3s集群
+    </div>
+    <div class="post-meta"><span title='2022-12-14 13:36:11 +0800 CST'>2022-12-14</span>&nbsp;·&nbsp;3 分钟&nbsp;·&nbsp;皂白
+
+</div>
+  </header> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">目录</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#%e8%bf%90%e8%a1%8c%e7%8e%af%e5%a2%83" aria-label="运行环境">运行环境</a></li>
+                <li>
+                    <a href="#%e5%87%86%e5%a4%87%e5%b7%a5%e4%bd%9c" aria-label="准备工作">准备工作</a></li>
+                <li>
+                    <a href="#%e4%b8%8b%e8%bd%bdk3s%e5%ae%89%e8%a3%85%e5%8c%85" aria-label="下载K3s安装包">下载K3s安装包</a></li>
+                <li>
+                    <a href="#%e5%ae%89%e8%a3%85k3s" aria-label="安装K3s">安装K3s</a></li>
+                <li>
+                    <a href="#%e9%aa%8c%e8%af%81%e5%ae%89%e8%a3%85" aria-label="验证安装">验证安装</a></li>
+                <li>
+                    <a href="#%e5%8f%82%e8%80%83%e8%b5%84%e6%96%99" aria-label="参考资料">参考资料</a>
+                </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><p>学习K8s为什么要安装K3s？K3s是轻量级的K8s，完全兼容K8s，和K8s操作也是一样的，安装简单，资源占用少，完全满足学习使用要求，学习阶段没有必要把大量的时间浪费在安装K8s上，生产环境一般都会直接买云服务器厂商的K8s，不用自己搭建。</p>
+<!--\more--> 
+<h2 id="运行环境">运行环境<a hidden class="anchor" aria-hidden="true" href="#运行环境">#</a></h2>
+<p>win10使用VMware Workstation安装ubuntu-20.04。</p>
+<p><strong>K3s版本</strong></p>
+<p>v1.25.4+k3s1</p>
+<p><strong>规划</strong></p>
+<ul>
+<li>k8s-master 192.168.66.42</li>
+<li>k8s-worker1 192.168.66.43</li>
+<li>k8s-worker2 192.168.66.45</li>
+</ul>
+<p>内存：2G、CPU：2核、硬盘：20G</p>
+<p>任意内网ip就行，保证三台服务器能互相ping通。</p>
+<h2 id="准备工作">准备工作<a hidden class="anchor" aria-hidden="true" href="#准备工作">#</a></h2>
+<p>需要在三台机器上都执行如下操作：</p>
+<ul>
+<li>关闭防火墙</li>
+</ul>
+<div class="highlight"><div style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">
+<table style="border-spacing:0;padding:0;margin:0;border:0;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">1
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>sudo ufw disable
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ul>
+<li>关闭swap</li>
+</ul>
+<div class="highlight"><div style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">
+<table style="border-spacing:0;padding:0;margin:0;border:0;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">1
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>sudo vim /etc/fstab
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>找到 <code>/swap.img     none    swap    sw      0       0</code>，在行首添加 <code>#</code>
+变成<code>#/swap.img     none    swap    sw      0       0</code></p>
+<p>重启系统并验证</p>
+<div class="highlight"><div style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">
+<table style="border-spacing:0;padding:0;margin:0;border:0;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">1
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>sudo swapon --show
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>输出为空即表示生效</p>
+<ul>
+<li>hostname</li>
+</ul>
+<p>需要确保三台机器的hostname是不同的</p>
+<p>可以使用<code>hostnamectl</code>查看hostname</p>
+<div class="highlight"><div style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">
+<table style="border-spacing:0;padding:0;margin:0;border:0;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">1
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>hostnamectl
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">
+<table style="border-spacing:0;padding:0;margin:0;border:0;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">1
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">2
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">3
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">4
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">5
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">6
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">7
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">8
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">9
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>   Static hostname: k8s-master
+</span></span><span style="display:flex;"><span>         Icon name: computer-vm
+</span></span><span style="display:flex;"><span>           Chassis: vm
+</span></span><span style="display:flex;"><span>        Machine ID: 2dfc205478df4165ad6cddc376b83a94
+</span></span><span style="display:flex;"><span>           Boot ID: 3edc65716421404cb48164c35980a5b7
+</span></span><span style="display:flex;"><span>    Virtualization: vmware
+</span></span><span style="display:flex;"><span>  Operating System: Ubuntu 20.04.5 LTS
+</span></span><span style="display:flex;"><span>            Kernel: Linux 5.4.0-135-generic
+</span></span><span style="display:flex;"><span>      Architecture: x86-64
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">
+<table style="border-spacing:0;padding:0;margin:0;border:0;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">1
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">2
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">3
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">4
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">5
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">6
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">7
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">8
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">9
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>   Static hostname: k8s-worker1
+</span></span><span style="display:flex;"><span>         Icon name: computer-vm
+</span></span><span style="display:flex;"><span>           Chassis: vm
+</span></span><span style="display:flex;"><span>        Machine ID: 2dfc205478df4165ad6cddc376b83a94
+</span></span><span style="display:flex;"><span>           Boot ID: 0fd037607afb49f285ad525e765e8943
+</span></span><span style="display:flex;"><span>    Virtualization: vmware
+</span></span><span style="display:flex;"><span>  Operating System: Ubuntu 20.04.5 LTS
+</span></span><span style="display:flex;"><span>            Kernel: Linux 5.4.0-135-generic
+</span></span><span style="display:flex;"><span>      Architecture: x86-64
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>设置hostname</p>
+<div class="highlight"><div style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">
+<table style="border-spacing:0;padding:0;margin:0;border:0;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">1
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">2
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">3
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sudo hostnamectl set-hostname k8s-master
+</span></span><span style="display:flex;"><span>sudo hostnamectl set-hostname k8s-worker1
+</span></span><span style="display:flex;"><span>sudo hostnamectl set-hostname k8s-worker1
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>``</p>
+<h2 id="下载k3s安装包">下载K3s安装包<a hidden class="anchor" aria-hidden="true" href="#下载k3s安装包">#</a></h2>
+<ul>
+<li>安装脚本<code>install.sh</code></li>
+</ul>
+<p>本地新建<code>install.sh</code>，打开<a href="https://get.k3s.io/">https://get.k3s.io/</a>，复制内容到<code>install.sh</code></p>
+<ul>
+<li><code>k3s</code>二进制文件</li>
+<li><code>k3s</code>镜像文件</li>
+</ul>
+<p><a href="https://github.com/k3s-io/k3s/releases/tag/v1.25.4%2Bk3s1">下载地址</a></p>
+<p><img src="/posts/k8s/k3s-download.png" alt="alt k3s download"/></p>
+<p>一共三个文件</p>
+<ul>
+<li>install.sh</li>
+<li>k3s</li>
+<li>k3s-airgap-images-amd64.tar.gz</li>
+</ul>
+<h2 id="安装k3s">安装K3s<a hidden class="anchor" aria-hidden="true" href="#安装k3s">#</a></h2>
+<p><strong>k8s-master主机</strong></p>
+<p>先在k8s-master主机安装K3s</p>
+<div class="highlight"><div style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">
+<table style="border-spacing:0;padding:0;margin:0;border:0;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">1
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">2
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">3
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">4
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">5
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span># 将k3s二进制文件移动到/usr/local/bin目录
+</span></span><span style="display:flex;"><span>sudo mv k3s /usr/local/bin
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span># 添加执行权限
+</span></span><span style="display:flex;"><span>sudo chmod +x /usr/local/bin/k3s
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">
+<table style="border-spacing:0;padding:0;margin:0;border:0;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">1
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">2
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">3
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">4
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">5
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-gdscript3" data-lang="gdscript3"><span style="display:flex;"><span><span style="color:#007f7f"># 新建目录</span>
+</span></span><span style="display:flex;"><span>sudo mkdir -p /<span style="color:#fff;font-weight:bold">var</span>/lib/rancher/k3s/agent/images/
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007f7f"># 将镜像移动到此目录（无需解压）</span>
+</span></span><span style="display:flex;"><span>sudo cp ./k3s-airgap-images-amd64.tar.gz /<span style="color:#fff;font-weight:bold">var</span>/lib/rancher/k3s/agent/images/
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">
+<table style="border-spacing:0;padding:0;margin:0;border:0;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272"> 1
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272"> 2
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272"> 3
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272"> 4
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272"> 5
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272"> 6
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272"> 7
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272"> 8
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272"> 9
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">10
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">11
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-gdscript3" data-lang="gdscript3"><span style="display:flex;"><span><span style="color:#007f7f"># 添加执行权限</span>
+</span></span><span style="display:flex;"><span>sudo chmod +x install.sh
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007f7f"># 离线安装</span>
+</span></span><span style="display:flex;"><span>sudo INSTALL_K3S_SKIP_DOWNLOAD=true ./install.sh
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007f7f"># 安装完成后，查看节点状态</span>
+</span></span><span style="display:flex;"><span>sudo kubectl get node
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007f7f"># 查看token</span>
+</span></span><span style="display:flex;"><span>sudo cat /<span style="color:#fff;font-weight:bold">var</span>/lib/rancher/k3s/server/node-token
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">
+<table style="border-spacing:0;padding:0;margin:0;border:0;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">1
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">2
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span># token
+</span></span><span style="display:flex;"><span>K1039d5486f90d89c63fd5b06af82594a82e20b7795d05861b402275c984ff9a359::server:0d9bdb8eb2214153d4f629e99b5baaf8
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>k8s-worker1、k8s-worker2主机</strong></p>
+<p>接着在k8s-worker1、k8s-worker2主机安装K3s</p>
+<div class="highlight"><div style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">
+<table style="border-spacing:0;padding:0;margin:0;border:0;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">1
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">2
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">3
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">4
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">5
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span># 将k3s二进制文件移动到/usr/local/bin目录
+</span></span><span style="display:flex;"><span>sudo mv k3s /usr/local/bin
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span># 添加执行权限
+</span></span><span style="display:flex;"><span>sudo chmod +x /usr/local/bin/k3s
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">
+<table style="border-spacing:0;padding:0;margin:0;border:0;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">1
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">2
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">3
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">4
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">5
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-gdscript3" data-lang="gdscript3"><span style="display:flex;"><span><span style="color:#007f7f"># 新建目录</span>
+</span></span><span style="display:flex;"><span>sudo mkdir -p /<span style="color:#fff;font-weight:bold">var</span>/lib/rancher/k3s/agent/images/
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007f7f"># 将镜像移动到此目录（无需解压）</span>
+</span></span><span style="display:flex;"><span>sudo cp ./k3s-airgap-images-amd64.tar.gz /<span style="color:#fff;font-weight:bold">var</span>/lib/rancher/k3s/agent/images/
+</span></span></code></pre></td></tr></table>
+</div>
+</div><div class="highlight"><div style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">
+<table style="border-spacing:0;padding:0;margin:0;border:0;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">1
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">2
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span># 添加执行权限
+</span></span><span style="display:flex;"><span>sudo chmod +x install.sh
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>注意！！！这一步要加上k8s-master主机的ip和刚才得到的token</p>
+<div class="highlight"><div style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">
+<table style="border-spacing:0;padding:0;margin:0;border:0;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">1
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">2
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">3
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">4
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">5
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span># 离线安装
+</span></span><span style="display:flex;"><span>sudo INSTALL_K3S_SKIP_DOWNLOAD=true \
+</span></span><span style="display:flex;"><span>K3S_URL=https://192.168.66.42:6443 \
+</span></span><span style="display:flex;"><span>K3S_TOKEN=K1039d5486f90d89c63fd5b06af82594a82e20b7795d05861b402275c984ff9a359::server:0d9bdb8eb2214153d4f629e99b5baaf8 \
+</span></span><span style="display:flex;"><span>./install.sh
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="验证安装">验证安装<a hidden class="anchor" aria-hidden="true" href="#验证安装">#</a></h2>
+<p><strong>k8s-master主机</strong></p>
+<p>在k8s-master主机执行</p>
+<div class="highlight"><div style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">
+<table style="border-spacing:0;padding:0;margin:0;border:0;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">1
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>sudo kubectl get node -o wide
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>得到</p>
+<div class="highlight"><div style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">
+<table style="border-spacing:0;padding:0;margin:0;border:0;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">1
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">2
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">3
+</span><span style="white-space:pre;-webkit-user-select:none;user-select:none;margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#727272">4
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;;width:100%">
+<pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>NAME          STATUS   ROLES                  AGE    VERSION        INTERNAL-IP     EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION      CONTAINER-RUNTIME
+</span></span><span style="display:flex;"><span>k8s-worker1   Ready    &lt;none&gt;                 2d2h   v1.25.4+k3s1   192.168.66.43   &lt;none&gt;        Ubuntu 20.04.5 LTS   5.4.0-135-generic   containerd://1.6.8-k3s1
+</span></span><span style="display:flex;"><span>k8s-worker2   Ready    &lt;none&gt;                 2d2h   v1.25.4+k3s1   192.168.66.45   &lt;none&gt;        Ubuntu 20.04.5 LTS   5.4.0-135-generic   containerd://1.6.8-k3s1
+</span></span><span style="display:flex;"><span>k8s-master    Ready    control-plane,master   2d3h   v1.25.4+k3s1   192.168.66.42   &lt;none&gt;        Ubuntu 20.04.5 LTS   5.4.0-135-generic   containerd://1.6.8-k3s1
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>证明集群安装搭建成功了</p>
+<h2 id="参考资料">参考资料<a hidden class="anchor" aria-hidden="true" href="#参考资料">#</a></h2>
+<ul>
+<li><a href="https://www.rancher.cn/k3s/">k3s官网</a></li>
+<li><a href="https://www.myfreax.com/how-to-change-hostname-on-ubuntu-20-04/">如何在Ubuntu 20.04设置主机名</a></li>
+<li><a href="https://www.yuque.com/wukong-zorrm/qdoy5p">Kubernetes二小时入门教程</a></li>
+<li><a href="https://www.yuque.com/wukong-zorrm/xwas40/">docker一小时入门教程</a></li>
+</ul>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+      <li><a href="https://nextyu.github.io/zh/tags/k8s/">K8s</a></li>
+      <li><a href="https://nextyu.github.io/zh/tags/k3s/">K3s</a></li>
+    </ul>
+<nav class="paginav">
+  <a class="prev" href="https://nextyu.github.io/zh/posts/k8s/k3s%E5%AE%89%E8%A3%85kubernetes-dashboard/">
+    <span class="title">« 上一页</span>
+    <br>
+    <span>K3s安装Kubernetes Dashboard</span>
+  </a>
+  <a class="next" href="https://nextyu.github.io/zh/posts/jvm/jvm%E6%9C%AC%E5%9C%B0%E5%86%85%E5%AD%98native-memory%E8%B7%9F%E8%B8%AA/">
+    <span class="title">下一页 »</span>
+    <br>
+    <span>jvm本地内存（native memory）跟踪</span>
+  </a>
+</nav>
+
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+    <span>&copy; 2024</span>
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+    本文总阅读量 <span id="busuanzi_value_page_pv"></span> 次
+    本文总访客量 <span id="busuanzi_value_page_uv"></span> 人
+    本站总访问量 <span id="busuanzi_value_site_pv"></span> 次
+    本站总访客数 <span id="busuanzi_value_site_uv"></span> 人
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+
+<script async src="https://npm.elemecdn.com/penndu@1.0.0/bsz.js"></script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+<script>
+    document.querySelectorAll('pre > code').forEach((codeblock) => {
+        const container = codeblock.parentNode.parentNode;
+
+        const copybutton = document.createElement('button');
+        copybutton.classList.add('copy-code');
+        copybutton.innerHTML = '复制';
+
+        function copyingDone() {
+            copybutton.innerHTML = '已复制！';
+            setTimeout(() => {
+                copybutton.innerHTML = '复制';
+            }, 2000);
+        }
+
+        copybutton.addEventListener('click', (cb) => {
+            if ('clipboard' in navigator) {
+                navigator.clipboard.writeText(codeblock.textContent);
+                copyingDone();
+                return;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(codeblock);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                copyingDone();
+            } catch (e) { };
+            selection.removeRange(range);
+        });
+
+        if (container.classList.contains("highlight")) {
+            container.appendChild(copybutton);
+        } else if (container.parentNode.firstChild == container) {
+            
+        } else if (codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.nodeName == "TABLE") {
+            
+            codeblock.parentNode.parentNode.parentNode.parentNode.parentNode.appendChild(copybutton);
+        } else {
+            
+            codeblock.parentNode.appendChild(copybutton);
+        }
+    });
+</script>
+</body>
+
+</html>
