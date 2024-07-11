@@ -6,7 +6,7 @@
     <description>Recent content in 📚文章 on 程序员皂白</description>
     <generator>Hugo -- 0.128.0</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Wed, 11 Jan 2023 15:08:21 +0800</lastBuildDate>
+    <lastBuildDate>Thu, 11 Jul 2024 19:10:56 +0800</lastBuildDate>
     <atom:link href="https://nextyu.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>容器环境JVM内存参数最佳实践</title>
@@ -51,11 +51,11 @@
       <description>内存溢出和内存泄露的区别</description>
     </item>
     <item>
-      <title>使用vlmcsd激活window和office</title>
-      <link>https://nextyu.github.io/posts/windows/%E4%BD%BF%E7%94%A8vlmcsd%E6%BF%80%E6%B4%BBwindow%E5%92%8Coffice/</link>
+      <title>使用vlmcsd激活window 10 window 11</title>
+      <link>https://nextyu.github.io/posts/windows/%E4%BD%BF%E7%94%A8vlmcsd%E6%BF%80%E6%B4%BBwindow-10window-11/</link>
       <pubDate>Thu, 17 Nov 2022 17:10:56 +0800</pubDate>
-      <guid>https://nextyu.github.io/posts/windows/%E4%BD%BF%E7%94%A8vlmcsd%E6%BF%80%E6%B4%BBwindow%E5%92%8Coffice/</guid>
-      <description>使用vlmcsd激活window和office</description>
+      <guid>https://nextyu.github.io/posts/windows/%E4%BD%BF%E7%94%A8vlmcsd%E6%BF%80%E6%B4%BBwindow-10window-11/</guid>
+      <description>使用vlmcsd激活window 10、window 11</description>
     </item>
   </channel>
 </rss>
